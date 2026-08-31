@@ -6,6 +6,8 @@
     <title>מעקב תקציב אישי</title>
     <!-- טעינת ספריית הגרפים Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- טעינת תוסף להצגת תוויות על גבי הגרף -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <style>
         :root {
             --primary: #2563eb;
@@ -75,7 +77,6 @@
         }
         .summary-card .amount { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
 
-        /* אזור גרף העוגה */
         .chart-container {
             background: #f8fafc;
             border: 1px solid var(--border-color);
@@ -96,8 +97,8 @@
             width: 100%;
         }
         .canvas-wrapper {
-            width: 220px;
-            height: 220px;
+            width: 240px;
+            height: 240px;
             position: relative;
         }
 
@@ -144,7 +145,7 @@
                     <div class="amount" id="total-amount">0.00 ₪</div>
                 </div>
 
-                <!-- גרף עוגה צבעוני -->
+                <!-- גרף עוגה צבעוני עם סכומים על החלקים -->
                 <div class="chart-container">
                     <h3>התפלגות הוצאות (עוגה)</h3>
                     <div class="canvas-wrapper">
@@ -230,6 +231,16 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     plugins: {
+                        datalabels: {
+                            color: '#ffffff',
+                            font: {
+                                weight: 'bold',
+                                size: 12
+                            },
+                            formatter: (value) => {
+                                return value > 0 ? value.toFixed(0) + ' ₪' : '';
+                            }
+                        },
                         legend: {
                             position: 'bottom',
                             labels: {
@@ -245,7 +256,8 @@
                             }
                         }
                     }
-                }
+                },
+                plugins: [ChartDataLabels]
             });
         }
 
@@ -295,7 +307,6 @@
                 }
             });
 
-            // עדכון הנתונים לגרף העוגה
             const chartDataValues = categories.map(cat => catTotals[cat]);
             initChart(chartDataValues);
 
