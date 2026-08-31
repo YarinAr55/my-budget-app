@@ -27,7 +27,30 @@
             border-radius: 16px;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
         }
-        h1 { text-align: center; color: var(--primary); margin-bottom: 24px; }
+        h1 { text-align: center; color: var(--primary); margin-bottom: 20px; }
+        
+        .month-selector {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f1f5f9;
+            padding: 10px 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+        .month-btn {
+            background: white;
+            border: 1px solid var(--border-color);
+            padding: 6px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+        .month-btn:hover { background: #e2e8f0; }
+
         .summary-card {
             background: #eff6ff; border: 1px solid #bfdbfe;
             padding: 16px; border-radius: 12px;
@@ -47,7 +70,7 @@
             font-size: 1rem; font-weight: bold; cursor: pointer;
         }
         button.btn-submit:hover { background-color: var(--primary-hover); }
-        .expense-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+        .expense-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; max-height: 250px; overflow-y: auto; }
         .expense-item {
             display: flex; justify-content: space-between; align-items: center;
             padding: 12px; background: #f8fafc; border: 1px solid var(--border-color);
@@ -62,10 +85,18 @@
 <body>
     <div class="container">
         <h1>מעקב תקציב אישי</h1>
+
+        <div class="month-selector">
+            <button class="month-btn" onclick="changeMonth(-1)">&#9664; חודש קודם</button>
+            <span id="current-month-label">חודש נוכחי</span>
+            <button class="month-btn" onclick="changeMonth(1)">חודש הבא &#9654;</button>
+        </div>
+
         <div class="summary-card">
-            <h3>סה"כ הוצאות החודש</h3>
+            <h3 id="summary-title">סה"כ הוצאות לחודש זה</h3>
             <div class="amount" id="total-amount">0.00 ₪</div>
         </div>
+
         <form id="expense-form">
             <div class="form-group">
                 <label for="amount">סכום (ב-₪)</label>
@@ -87,19 +118,44 @@
             </div>
             <button type="submit" class="btn-submit">הוסף הוצאה</button>
         </form>
+
         <div class="history-section">
-            <h2>היסטוריית הוצאות</h2>
+            <h2>היסטוריית הוצאות לחודש הנבחר</h2>
             <ul id="expense-list" class="expense-list"></ul>
         </div>
     </div>
     <script>
         let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+        
+        // מעקב אחרי החודש והשנה שמוצגים כרגע (מתחיל בחודש הנוכחי)
+        let today = new Date();
+        let displayYear = today.getFullYear();
+        let displayMonth = today.getMonth(); // 0-11
+
+        const monthNames = [
+            "ינואר", "פברואר", "מרץ", "אפֿריל", "מאי", "יוני",
+            "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"
+        ];
+
         const form = document.getElementById('expense-form');
         const amountInput = document.getElementById('amount');
         const categorySelect = document.getElementById('category');
         const noteInput = document.getElementById('note');
         const expenseList = document.getElementById('expense-list');
         const totalAmountEl = document.getElementById('total-amount');
+        const monthLabel = document.getElementById('current-month-label');
+
+        function changeMonth(direction) {
+            displayMonth += direction;
+            if (displayMonth > 11) {
+                displayMonth = 0;
+                displayYear++;
+            } else if (displayMonth < 0) {
+                displayMonth = 11;
+                displayYear--;
+            }
+            render();
+        }
 
         function saveAndRender() {
             localStorage.setItem('expenses', JSON.stringify(expenses));
@@ -107,22 +163,34 @@
         }
 
         function render() {
+            monthLabel.textContent = `${monthNames[displayMonth]} ${displayYear}`;
+            
+            // סינון הוצאות לפי החודש והשנה שנבחרו
+            const filteredExpenses = expenses.filter(exp => {
+                const expDate = new Date(exp.rawDate);
+                return expDate.getFullYear() === displayYear && expDate.getMonth() === displayMonth;
+            });
+
             expenseList.innerHTML = '';
             let total = 0;
-            if (expenses.length === 0) {
-                expenseList.innerHTML = '<li class="empty-state">אין עדיין הוצאות רשומות.</li>';
+
+            if (filteredExpenses.length === 0) {
+                expenseList.innerHTML = '<li class="empty-state">אין הוצאות רשומות לחודש זה.</li>';
                 totalAmountEl.textContent = '0.00 ₪';
                 return;
             }
-            [...expenses].reverse().forEach((exp, index) => {
-                const originalIndex = expenses.length - 1 - index;
+
+            filteredExpenses.slice().reverse().forEach((exp) => {
+                // מציאת האינדקס האמיתי במערך המקורי לצורך מחיקה מדויקת
+                const originalIndex = expenses.indexOf(exp);
                 total += parseFloat(exp.amount);
+
                 const li = document.createElement('li');
                 li.className = 'expense-item';
                 li.innerHTML = `
                     <div>
                         <strong>${exp.category}</strong><br>
-                        <small style="color: #64748b;">${exp.date} ${exp.note ? '• ' + exp.note : ''}</small>
+                        <small style="color: #64748b;">${exp.dateStr} ${exp.note ? '• ' + exp.note : ''}</small>
                     </div>
                     <div style="display: flex; align-items: center; gap: 12px;">
                         <span class="expense-amount">-${parseFloat(exp.amount).toFixed(2)} ₪</span>
@@ -131,6 +199,7 @@
                 `;
                 expenseList.appendChild(li);
             });
+
             totalAmountEl.textContent = total.toFixed(2) + ' ₪';
         }
 
@@ -140,9 +209,22 @@
             const category = categorySelect.value;
             const note = noteInput.value.trim();
             if (!amount || !category) return;
+
             const now = new Date();
             const dateStr = now.toLocaleDateString('he-IL') + ' ' + now.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
-            expenses.push({ amount, category, note, date: dateStr });
+
+            expenses.push({
+                amount,
+                category,
+                note,
+                dateStr,
+                rawDate: now.toISOString() // שומרים תאריך מדויק כדי לדעת לאיזה חודש לשייך
+            });
+
+            // נעביר את התצוגה אוטומטית לחודש שבו נוספה ההוצאה (החודש הנוכחי)
+            displayYear = now.getFullYear();
+            displayMonth = now.getMonth();
+
             saveAndRender();
             form.reset();
         });
@@ -151,6 +233,7 @@
             expenses.splice(index, 1);
             saveAndRender();
         };
+
         render();
     </script>
 </body>
