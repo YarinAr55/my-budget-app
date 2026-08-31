@@ -54,7 +54,6 @@
         }
         .month-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
 
-        /* אזור האנימציה של החלפת החודש */
         .slide-container {
             overflow: hidden;
             position: relative;
@@ -104,9 +103,11 @@
         <h1>מעקב תקציב אישי</h1>
 
         <div class="month-selector">
-            <button class="month-btn" onclick="changeMonth(1)" title="חודש הבא">&#10094;</button>
+            <!-- חץ שמאלה מעביר לחודש קודם (הולכים אחורה בזמן שמאלה) -->
+            <button class="month-btn" onclick="changeMonth(-1)" title="חודש קודם">&#10094;</button>
             <span id="current-month-label">חודש נוכחי</span>
-            <button class="month-btn" onclick="changeMonth(-1)" title="חודש קודם">&#10095;</button>
+            <!-- חץ ימינה מעביר לחודש הבא (מתקדמים קדימה בזמן ימינה) -->
+            <button class="month-btn" onclick="changeMonth(1)" title="חודש הבא">&#10095;</button>
         </div>
 
         <div class="slide-container">
