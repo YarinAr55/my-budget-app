@@ -97,8 +97,9 @@
             width: 100%;
         }
         .canvas-wrapper {
-            width: 240px;
-            height: 240px;
+            width: 100%;
+            max-width: 300px;
+            height: 260px;
             position: relative;
         }
 
@@ -145,7 +146,7 @@
                     <div class="amount" id="total-amount">0.00 ₪</div>
                 </div>
 
-                <!-- גרף עוגה צבעוני עם סכומים על החלקים -->
+                <!-- גרף עוגה מסודר -->
                 <div class="chart-container">
                     <h3>התפלגות הוצאות (עוגה)</h3>
                     <div class="canvas-wrapper">
@@ -232,12 +233,17 @@
                     maintainAspectRatio: false,
                     plugins: {
                         datalabels: {
-                            color: '#ffffff',
+                            color: '#1e293b', // טקסט כהה ובולט
                             font: {
                                 weight: 'bold',
-                                size: 12
+                                size: 11
                             },
+                            // הצגת המספר מחוץ לפרוסה עם קו מקשר או ריווח מונע חפיפה
+                            anchor: 'end',
+                            align: 'start',
+                            offset: 4,
                             formatter: (value) => {
+                                // מציג את הסכום רק אם הוא גדול מ-0
                                 return value > 0 ? value.toFixed(0) + ' ₪' : '';
                             }
                         },
@@ -245,7 +251,8 @@
                             position: 'bottom',
                             labels: {
                                 font: { size: 11, family: 'system-ui' },
-                                boxWidth: 12
+                                boxWidth: 12,
+                                padding: 15
                             }
                         },
                         tooltip: {
@@ -330,6 +337,7 @@
                         <button class="btn-delete" onclick="deleteExpense(${originalIndex})">&times;</button>
                     </div>
                 `;
+                expenseList.createElement ? null : expenseList.appendChild(li); // Safe append
                 expenseList.appendChild(li);
             });
 
