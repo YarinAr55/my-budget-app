@@ -28,7 +28,7 @@
             display: flex; justify-content: center;
         }
         .container {
-            width: 100%; max-width: 600px;
+            width: 100%; max-width: 650px;
             background: var(--card-bg); padding: 24px;
             border-radius: 16px;
             box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
@@ -68,7 +68,6 @@
             background: #eff6ff; border: 1px solid #bfdbfe;
             padding: 16px; border-radius: 12px;
             text-align: center; margin-bottom: 20px;
-            position: relative;
         }
         .summary-card .amount { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
         
@@ -99,7 +98,6 @@
             cursor: pointer; font-size: 0.85rem; text-decoration: underline; margin-top: 4px; padding: 0;
         }
 
-        /* סרגל חיפוש וכלים */
         .tools-bar {
             display: flex;
             gap: 10px;
@@ -156,6 +154,7 @@
         }
         .checkbox-group {
             flex-direction: row; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem;
+            background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color);
         }
         .checkbox-group input { width: 18px; height: 18px; cursor: pointer; }
 
@@ -174,13 +173,27 @@
             border-radius: 8px;
         }
         .expense-amount { font-weight: bold; color: var(--danger); }
-        .tag-fixed {
-            background: #e0e7ff; color: #3730a3; font-size: 0.7rem;
-            padding: 2px 6px; border-radius: 4px; margin-right: 6px; font-weight: bold;
-        }
         .btn-delete { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.2rem; }
         .btn-delete:hover { color: var(--danger); }
         .empty-state { text-align: center; color: #94a3b8; padding: 20px; }
+
+        /* אזור ההוצאות הקבועות בצד/למטה */
+        .fixed-section {
+            background: #fdf4ff;
+            border: 1px solid #f0abfc;
+            border-radius: 12px;
+            padding: 16px;
+            margin-top: 30px;
+        }
+        .fixed-section h2 { color: #86198f; font-size: 1.1rem; margin-top: 0; margin-bottom: 12px; border-bottom: 1px solid #f0abfc; padding-bottom: 6px; }
+        .fixed-item {
+            display: flex; justify-content: space-between; align-items: center;
+            background: white; padding: 10px 12px; border-radius: 8px;
+            border: 1px solid #f5d0fe; margin-bottom: 8px;
+        }
+        .fixed-total {
+            text-align: left; font-weight: bold; color: #86198f; margin-top: 10px; font-size: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -196,8 +209,9 @@
         <div class="slide-container">
             <div id="slide-wrapper" class="slide-content">
                 <div class="summary-card">
-                    <h3>סה"כ הוצאות לחודש זה</h3>
+                    <h3>סה"כ הוצאות משתנות לחודש זה</h3>
                     <div class="amount" id="total-amount">0.00 ₪</div>
+                    <div style="font-size: 0.85rem; color: #64748b; margin-top: 4px;" id="total-combined-text">כולל הוצאות קבועות: 0.00 ₪</div>
                     
                     <div class="budget-progress-container">
                         <div id="progress-bar" class="budget-progress-bar"></div>
@@ -215,16 +229,16 @@
                     <button class="btn-export" onclick="exportToExcel()" title="ייצוא לאקסל">ייצוא ל-Excel</button>
                 </div>
 
-                <!-- גרף עוגה -->
+                <!-- גרף עוגה (רק להוצאות המשתנות!) -->
                 <div class="chart-container">
-                    <h3>התפלגות הוצאות (עוגה)</h3>
+                    <h3>התפלגות הוצאות משתנות (עוגה)</h3>
                     <div class="canvas-wrapper">
                         <canvas id="budgetChart"></canvas>
                     </div>
                 </div>
 
                 <div class="history-section">
-                    <h2>היסטוריית הוצאות לחודש הנבחר</h2>
+                    <h2>היסטוריית הוצאות משתנות לחודש הנבחר</h2>
                     <ul id="expense-list" class="expense-list"></ul>
                 </div>
             </div>
@@ -246,29 +260,33 @@
                     <option value="סופרמרקט וקניות">סופרמרקט וקניות</option>
                     <option value="רכב ודלק">רכב ודלק</option>
                     <option value="תחבורה ציבורית">תחבורה ציבורית</option>
-                    <option value="חשמל">חשמל</option>
-                    <option value="מים">מים</option>
-                    <option value="ארנונה וועד בית">ארנונה וועד בית</option>
-                    <option value="תקשורת (אינטרנט/סלולר)">תקשורת (אינטרנט/סלולר)</option>
                     <option value="בילויים ופנאי">בילויים ופנאי</option>
                     <option value="שונות">שונות</option>
                 </select>
             </div>
             <div class="form-group">
                 <label for="note">הערה (אופציונלי)</label>
-                <input type="text" id="note" placeholder="למשל: תדלוק פז">
+                <input type="text" id="note" placeholder="למשל: קפה ועוגה">
             </div>
             <div class="form-group checkbox-group">
-                <input type="checkbox" id="is-fixed">
-                <label for="is-fixed" style="cursor: pointer;">זוהי הוצאה קבועה (הוראת קבע חודשית)</label>
+                <input type="checkbox" id="is-fixed" onchange="toggleFormMode(this)">
+                <label for="is-fixed" style="cursor: pointer; font-weight: bold; color: #86198f;">זוהי הוצאה קבועה שנשארת לתמיד (כמו שכירות, מנויים...)</label>
             </div>
-            <button type="submit" class="btn-submit">הוסף הוצאה</button>
+            <button type="submit" id="submit-btn" class="btn-submit">הוסף הוצאה משתנה</button>
         </form>
+
+        <!-- אזור הוצאות קבועות נפרד -->
+        <div class="fixed-section">
+            <h2>📌 הוצאות קבועות (מתמשכות)</h2>
+            <ul id="fixed-list" style="list-style: none; padding: 0; margin: 0;"></ul>
+            <div id="fixed-total" class="fixed-total">סה"כ הוצאות קבועות: 0.00 ₪</div>
+        </div>
     </div>
 
     <script>
         let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
-        let budgets = JSON.parse(localStorage.getItem('budgets')) || {}; // תקציב לכל חודש מפתח "YYYY-M"
+        let fixedExpenses = JSON.parse(localStorage.getItem('fixedExpenses')) || [];
+        let budgets = JSON.parse(localStorage.getItem('budgets')) || {};
         
         let today = new Date();
         let displayYear = today.getFullYear();
@@ -280,13 +298,11 @@
         ];
 
         const categories = [
-            "אוכל ומסעדות", "סופרמרקט וקניות", "רכב ודלק", "תחבורה ציבורית", 
-            "חשמל", "מים", "ארנונה וועד בית", "תקשורת (אינטרנט/סלולר)", "בילויים ופנאי", "שונות"
+            "אוכל ומסעדות", "סופרמרקט וקניות", "רכב ודלק", "תחבורה ציבורית", "בילויים ופנאי", "שונות"
         ];
 
         const categoryColors = [
-            '#2563eb', '#3b82f6', '#f59e0b', '#fbbf24', 
-            '#e11d48', '#06b6d4', '#8b5cf6', '#ec4899', '#10b981', '#64748b'
+            '#2563eb', '#3b82f6', '#f59e0b', '#fbbf24', '#10b981', '#64748b'
         ];
 
         let myChart = null;
@@ -296,8 +312,12 @@
         const categorySelect = document.getElementById('category');
         const noteInput = document.getElementById('note');
         const isFixedInput = document.getElementById('is-fixed');
+        const submitBtn = document.getElementById('submit-btn');
         const expenseList = document.getElementById('expense-list');
+        const fixedList = document.getElementById('fixed-list');
+        const fixedTotalEl = document.getElementById('fixed-total');
         const totalAmountEl = document.getElementById('total-amount');
+        const totalCombinedText = document.getElementById('total-combined-text');
         const monthLabel = document.getElementById('current-month-label');
         const slideWrapper = document.getElementById('slide-wrapper');
         const searchInput = document.getElementById('search-input');
@@ -305,39 +325,13 @@
         const budgetStatusText = document.getElementById('budget-status-text');
         const budgetMaxText = document.getElementById('budget-max-text');
 
-        // בדיקה ויצירה אוטומטית של הוצאות קבועות בחודשים חדשים
-        function checkAndGenerateFixedExpenses() {
-            const currentKey = `${displayYear}-${displayMonth}`;
-            const hasGeneratedKey = `generated_${currentKey}`;
-            
-            // אם כבר יצרו לחודש זה, דלג
-            if (localStorage.getItem(hasGeneratedKey)) return;
-
-            // מצא הוצאות קבועות מחודשים קודמים
-            const fixedTemplates = expenses.filter(exp => exp.isFixed);
-            if (fixedTemplates.length === 0) return;
-
-            // בדוק האם כבר קיימות הוצאות לחודש הנוכחי
-            const existingThisMonth = expenses.filter(exp => {
-                const d = new Date(exp.rawDate);
-                return d.getFullYear() === displayYear && d.getMonth() === displayMonth && exp.isFixed;
-            });
-
-            // אם אין עדיין הוצאות קבועות רשומות לחודש זה, צור אותן בהתבסס על התבניות
-            if (existingThisMonth.length === 0) {
-                fixedTemplates.forEach(template => {
-                    const newDate = new Date(displayYear, displayMonth, 1, 10, 0, 0); // תחילת חודש
-                    expenses.push({
-                        amount: template.amount,
-                        category: template.category,
-                        note: template.note ? template.note + ' (קבוע)' : 'הוצאה קבועה',
-                        dateStr: newDate.toLocaleDateString('he-IL') + ' 10:00',
-                        rawDate: newDate.toISOString(),
-                        isFixed: true
-                    });
-                });
-                localStorage.setItem(hasGeneratedKey, 'true');
-                localStorage.setItem('expenses', JSON.stringify(expenses));
+        function toggleFormMode(checkbox) {
+            if (checkbox.checked) {
+                submitBtn.textContent = "הוסף להוצאות הקבועות";
+                submitBtn.style.backgroundColor = "#9333ea";
+            } else {
+                submitBtn.textContent = "הוסף הוצאה משתנה";
+                submitBtn.style.backgroundColor = "var(--primary)";
             }
         }
 
@@ -381,8 +375,6 @@
                 displayMonth += direction;
                 if (displayMonth > 11) { displayMonth = 0; displayYear++; }
                 else if (displayMonth < 0) { displayMonth = 11; displayYear--; }
-                
-                checkAndGenerateFixedExpenses();
                 render();
                 slideWrapper.classList.remove('fade-out');
             }, 200);
@@ -391,7 +383,7 @@
         function setMonthlyBudget() {
             const currentKey = `${displayYear}-${displayMonth}`;
             const currentVal = budgets[currentKey] || '';
-            const input = prompt(`הכנס תקציב מקסימלי לחודש ${monthNames[displayMonth]} ${displayYear} (ב-₪):`, currentVal);
+            const input = prompt(`הכנס תקציב מקסימלי להוצאות המשתנות בחודש ${monthNames[displayMonth]} ${displayYear} (ב-₪):`, currentVal);
             if (input !== null) {
                 const num = parseFloat(input);
                 if (!isNaN(num) && num > 0) {
@@ -404,7 +396,7 @@
             }
         }
 
-        function updateBudgetUI(total) {
+        function updateBudgetUI(variableTotal) {
             const currentKey = `${displayYear}-${displayMonth}`;
             const maxBudget = budgets[currentKey];
 
@@ -415,29 +407,32 @@
                 return;
             }
 
-            const percentage = Math.min((total / maxBudget) * 100, 100);
+            const percentage = Math.min((variableTotal / maxBudget) * 100, 100);
             progressBar.style.width = percentage + '%';
-            budgetMaxText.textContent = `יעד: ${maxBudget.toFixed(2)} ₪`;
+            budgetMaxText.textContent = `יעד משתנות: ${maxBudget.toFixed(2)} ₪`;
 
-            if (total > maxBudget) {
+            if (variableTotal > maxBudget) {
                 progressBar.style.backgroundColor = 'var(--danger)';
-                budgetStatusText.textContent = `⚠️ חריגה מהתקציב ב- ${(total - maxBudget).toFixed(2)} ₪!`;
+                budgetStatusText.textContent = `⚠️ חריגה מהתקציב ב- ${(variableTotal - maxBudget).toFixed(2)} ₪!`;
                 budgetStatusText.style.color = 'var(--danger)';
             } else if (percentage > 85) {
                 progressBar.style.backgroundColor = 'var(--warning)';
-                budgetStatusText.textContent = `⚠️ מתקרב לתקציב (נותרו ${(maxBudget - total).toFixed(2)} ₪)`;
+                budgetStatusText.textContent = `⚠️ מתקרב לתקציב (נותרו ${(maxBudget - variableTotal).toFixed(2)} ₪)`;
                 budgetStatusText.style.color = 'var(--warning)';
             } else {
                 progressBar.style.backgroundColor = 'var(--success)';
-                budgetStatusText.textContent = `✅ בשליטה (נותרו ${(maxBudget - total).toFixed(2)} ₪)`;
+                budgetStatusText.textContent = `✅ בשליטה (נותרו ${(maxBudget - variableTotal).toFixed(2)} ₪)`;
                 budgetStatusText.style.color = 'var(--success)';
             }
         }
 
         function exportToExcel() {
-            let csv = '\uFEFFסכום,קטגוריה,הערה,תאריך,קבוע\n';
+            let csv = '\uFEFFסוג,סכום,קטגוריה,הערה,תאריך\n';
             expenses.forEach(exp => {
-                csv += `"${exp.amount}","${exp.category}","${exp.note || ''}","${exp.dateStr}","${exp.isFixed ? 'כן' : 'לא'}"\n`;
+                csv += `"משתנה","${exp.amount}","${exp.category}","${exp.note || ''}","${exp.dateStr}"\n`;
+            });
+            fixedExpenses.forEach(exp => {
+                csv += `"קבוע","${exp.amount}","${exp.category}","${exp.note || ''}","תמיד"\n`;
             });
             const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
@@ -449,6 +444,7 @@
 
         function saveAndRender() {
             localStorage.setItem('expenses', JSON.stringify(expenses));
+            localStorage.setItem('fixedExpenses', JSON.stringify(fixedExpenses));
             render();
         }
 
@@ -456,40 +452,72 @@
             monthLabel.textContent = `${monthNames[displayMonth]} ${displayYear}`;
             const searchTerm = searchInput.value.trim().toLowerCase();
             
+            // סינון הוצאות משתנות לחודש הנבחר
             const filteredExpenses = expenses.filter(exp => {
                 const expDate = new Date(exp.rawDate);
                 const isCorrectMonth = expDate.getFullYear() === displayYear && expDate.getMonth() === displayMonth;
                 if (!isCorrectMonth) return false;
 
                 if (!searchTerm) return true;
-                const matchCategory = exp.category.toLowerCase().includes(searchTerm);
-                const matchNote = exp.note && exp.note.toLowerCase().includes(searchTerm);
-                return matchCategory || matchNote;
+                return exp.category.toLowerCase().includes(searchTerm) || (exp.note && exp.note.toLowerCase().includes(searchTerm));
             });
 
-            expenseList.innerHTML = '';
-            let total = 0;
+            // חישוב סך הכל משתנות חודשי
+            let variableTotal = 0;
             let catTotals = {};
             categories.forEach(cat => catTotals[cat] = 0);
 
-            // חישוב סך הכל חודשי (ללא קשר לחיפוש הנוכחי בטבלה)
             expenses.forEach(exp => {
                 const expDate = new Date(exp.rawDate);
                 if (expDate.getFullYear() === displayYear && expDate.getMonth() === displayMonth) {
-                    total += parseFloat(exp.amount);
+                    variableTotal += parseFloat(exp.amount);
                     if (catTotals[exp.category] !== undefined) {
                         catTotals[exp.category] += parseFloat(exp.amount);
                     }
                 }
             });
 
+            // חישוב סך הכל קבועות
+            let fixedTotal = 0;
+            fixedExpenses.forEach(item => {
+                fixedTotal += parseFloat(item.amount);
+            });
+
+            // הצגת רשימת ההוצאות הקבועות בצד
+            fixedList.innerHTML = '';
+            if (fixedExpenses.length === 0) {
+                fixedList.innerHTML = '<li style="text-align: center; color: #94a3b8; padding: 10px; font-size: 0.9rem;">אין הוצאות קבועות מוגדרות.</li>';
+            } else {
+                fixedExpenses.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.className = 'fixed-item';
+                    li.innerHTML = `
+                        <div>
+                            <strong>${item.category}</strong> <span style="font-size: 0.8rem; color: #86198f; background: #fae8ff; padding: 2px 6px; border-radius: 4px;">קבוע</span><br>
+                            <small style="color: #64748b;">${item.note ? item.note : 'ללא הערה'}</small>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <span class="expense-amount" style="color: #86198f;">-${parseFloat(item.amount).toFixed(2)} ₪</span>
+                            <button class="btn-delete" onclick="deleteFixedExpense(${index})">&times;</button>
+                        </div>
+                    `;
+                    fixedList.appendChild(li);
+                });
+            }
+            fixedTotalEl.textContent = `סה"כ הוצאות קבועות: ${fixedTotal.toFixed(2)} ₪`;
+
+            // עדכון הגרף והתקציב (רק על משתנות!)
             const chartDataValues = categories.map(cat => catTotals[cat]);
             initChart(chartDataValues);
-            updateBudgetUI(total);
-            totalAmountEl.textContent = total.toFixed(2) + ' ₪';
+            updateBudgetUI(variableTotal);
 
+            totalAmountEl.textContent = variableTotal.toFixed(2) + ' ₪';
+            totalCombinedText.textContent = `כולל הוצאות קבועות ברקע: ${(variableTotal + fixedTotal).toFixed(2)} ₪`;
+
+            // הצגת רשימת המשתנות החודשיות
+            expenseList.innerHTML = '';
             if (filteredExpenses.length === 0) {
-                expenseList.innerHTML = '<li class="empty-state">אין הוצאות רשומות תואמות לחודש זה.</li>';
+                expenseList.innerHTML = '<li class="empty-state">אין הוצאות משתנות רשומות לחודש זה.</li>';
                 return;
             }
 
@@ -499,7 +527,6 @@
                 li.className = 'expense-item';
                 li.innerHTML = `
                     <div>
-                        ${exp.isFixed ? '<span class="tag-fixed">קבוע</span>' : ''}
                         <strong>${exp.category}</strong><br>
                         <small style="color: #64748b;">${exp.dateStr} ${exp.note ? '• ' + exp.note : ''}</small>
                     </div>
@@ -520,24 +547,28 @@
             const isFixed = isFixedInput.checked;
             if (!amount || !category) return;
 
-            const now = new Date();
-            // אם מוסיפים לחודש שמוצג כרגע במסך ולא לחודש הנוכחי ממש:
-            const targetDate = new Date(displayYear, displayMonth, now.getDate(), now.getHours(), now.getMinutes());
+            if (isFixed) {
+                // שמירה ברשימת הקבועות שרצות לתמיד
+                fixedExpenses.push({ amount, category, note });
+            } else {
+                // שמירה כהוצאה משתנה חודשית
+                const now = new Date();
+                const targetDate = new Date(displayYear, displayMonth, now.getDate(), now.getHours(), now.getMinutes());
+                const dateStr = targetDate.toLocaleDateString('he-IL') + ' ' + targetDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
 
-            const dateStr = targetDate.toLocaleDateString('he-IL') + ' ' + targetDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
-
-            expenses.push({
-                amount,
-                category,
-                note,
-                dateStr,
-                rawDate: targetDate.toISOString(),
-                isFixed
-            });
+                expenses.push({
+                    amount,
+                    category,
+                    note,
+                    dateStr,
+                    rawDate: targetDate.toISOString()
+                });
+            }
 
             saveAndRender();
             form.reset();
             isFixedInput.checked = false;
+            toggleFormMode(isFixedInput);
         });
 
         window.deleteExpense = function(index) {
@@ -545,8 +576,11 @@
             saveAndRender();
         };
 
-        // הרצה ראשונית
-        checkAndGenerateFixedExpenses();
+        window.deleteFixedExpense = function(index) {
+            fixedExpenses.splice(index, 1);
+            saveAndRender();
+        };
+
         render();
     </script>
 </body>
