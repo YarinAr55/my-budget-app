@@ -174,14 +174,20 @@
                 <select id="category" required>
                     <option value="" disabled selected>בחר קטגוריה</option>
                     <option value="אוכל ומסעדות">אוכל ומסעדות</option>
-                    <option value="תחבורה">תחבורה</option>
-                    <option value="קניות ופנאי">קניות ופנאי</option>
-                    <option value="חשבונות ושונות">חשבונות ושונות</option>
+                    <option value="סופרמרקט וקניות">סופרמרקט וקניות</option>
+                    <option value="רכב ודלק">רכב ודלק</option>
+                    <option value="תחבורה ציבורית">תחבורה ציבורית</option>
+                    <option value="חשמל">חשמל</option>
+                    <option value="מים">מים</option>
+                    <option value="ארנונה וועד בית">ארנונה וועד בית</option>
+                    <option value="תקשורת (אינטרנט/סלולר)">תקשורת (אינטרנט/סלולר)</option>
+                    <option value="בילויים ופנאי">בילויים ופנאי</option>
+                    <option value="שונות">שונות</option>
                 </select>
             </div>
             <div class="form-group">
                 <label for="note">הערה (אופציונלי)</label>
-                <input type="text" id="note" placeholder="למשל: קפה ועוגה">
+                <input type="text" id="note" placeholder="למשל: תדלוק פז">
             </div>
             <button type="submit" class="btn-submit">הוסף הוצאה</button>
         </form>
@@ -199,8 +205,33 @@
             "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"
         ];
 
-        const categories = ["אוכל ומסעדות", "תחבורה", "קניות ופנאי", "חשבונות ושונות"];
-        const categoryColors = ['#2563eb', '#22c55e', '#f59e0b', '#ef4444'];
+        // קטגוריות מעודכנות
+        const categories = [
+            "אוכל ומסעדות", 
+            "סופרמרקט וקניות", 
+            "רכב ודלק", 
+            "תחבורה ציבורית", 
+            "חשמל", 
+            "מים", 
+            "ארנונה וועד בית", 
+            "תקשורת (אינטרנט/סלולר)", 
+            "בילויים ופנאי", 
+            "שונות"
+        ];
+
+        // התאמת צבעים ייחודיים לכל קטגוריה בגרף
+        const categoryColors = [
+            '#2563eb', // אוכל ומסעדות
+            '#3b82f6', // סופרמרקט וקניות
+            '#f59e0b', // רכב ודלק
+            '#fbbf24', // תחבורה ציבורית
+            '#e11d48', // חשמל
+            '#06b6d4', // מים
+            '#8b5cf6', // ארנונה וועד בית
+            '#ec4899', // תקשורת
+            '#10b981', // בילויים ופנאי
+            '#64748b'  // שונות
+        ];
 
         let myChart = null;
 
@@ -233,26 +264,24 @@
                     maintainAspectRatio: false,
                     plugins: {
                         datalabels: {
-                            color: '#1e293b', // טקסט כהה ובולט
+                            color: '#1e293b',
                             font: {
                                 weight: 'bold',
-                                size: 11
+                                size: 10
                             },
-                            // הצגת המספר מחוץ לפרוסה עם קו מקשר או ריווח מונע חפיפה
                             anchor: 'end',
                             align: 'start',
                             offset: 4,
                             formatter: (value) => {
-                                // מציג את הסכום רק אם הוא גדול מ-0
                                 return value > 0 ? value.toFixed(0) + ' ₪' : '';
                             }
                         },
                         legend: {
                             position: 'bottom',
                             labels: {
-                                font: { size: 11, family: 'system-ui' },
-                                boxWidth: 12,
-                                padding: 15
+                                font: { size: 10, family: 'system-ui' },
+                                boxWidth: 10,
+                                padding: 10
                             }
                         },
                         tooltip: {
@@ -300,12 +329,8 @@
 
             expenseList.innerHTML = '';
             let total = 0;
-            let catTotals = {
-                "אוכל ומסעדות": 0,
-                "תחבורה": 0,
-                "קניות ופנאי": 0,
-                "חשבונות ושונות": 0
-            };
+            let catTotals = {};
+            categories.forEach(cat => catTotals[cat] = 0);
 
             filteredExpenses.forEach(exp => {
                 total += parseFloat(exp.amount);
@@ -337,7 +362,6 @@
                         <button class="btn-delete" onclick="deleteExpense(${originalIndex})">&times;</button>
                     </div>
                 `;
-                expenseList.createElement ? null : expenseList.appendChild(li); // Safe append
                 expenseList.appendChild(li);
             });
 
