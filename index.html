@@ -17,6 +17,8 @@
             --text-color: #1e293b;
             --border-color: #e2e8f0;
             --danger: #ef4444;
+            --success: #22c55e;
+            --warning: #f59e0b;
         }
         body {
             font-family: system-ui, -apple-system, sans-serif;
@@ -58,24 +60,66 @@
         }
         .month-btn:hover { background: var(--primary); color: white; border-color: var(--primary); }
 
-        .slide-container {
-            overflow: hidden;
-            position: relative;
-        }
-        .slide-content {
-            transition: transform 0.3s ease, opacity 0.3s ease;
-        }
-        .fade-out {
-            opacity: 0;
-            transform: scale(0.97);
-        }
+        .slide-container { overflow: hidden; position: relative; }
+        .slide-content { transition: transform 0.3s ease, opacity 0.3s ease; }
+        .fade-out { opacity: 0; transform: scale(0.97); }
 
         .summary-card {
             background: #eff6ff; border: 1px solid #bfdbfe;
             padding: 16px; border-radius: 12px;
-            text-align: center; margin-bottom: 24px;
+            text-align: center; margin-bottom: 20px;
+            position: relative;
         }
         .summary-card .amount { font-size: 1.5rem; font-weight: bold; color: var(--primary); }
+        
+        /* סרגל התקדמות תקציב */
+        .budget-progress-container {
+            margin-top: 10px;
+            background: #e2e8f0;
+            border-radius: 8px;
+            height: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+        .budget-progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--success);
+            transition: width 0.4s, background-color 0.4s;
+        }
+        .budget-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-top: 6px;
+        }
+        .btn-budget-edit {
+            background: none; border: none; color: var(--primary);
+            cursor: pointer; font-size: 0.85rem; text-decoration: underline; margin-top: 4px; padding: 0;
+        }
+
+        /* סרגל חיפוש וכלים */
+        .tools-bar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .search-input {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.9rem;
+            outline: none;
+        }
+        .btn-export {
+            background: #10b981; color: white; border: none;
+            padding: 8px 12px; border-radius: 8px; cursor: pointer;
+            font-size: 0.9rem; font-weight: bold; white-space: nowrap;
+            transition: background 0.2s;
+        }
+        .btn-export:hover { background: #059669; }
 
         .chart-container {
             background: #f8fafc;
@@ -103,13 +147,18 @@
             position: relative;
         }
 
-        form { display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px; }
+        form { display: flex; flex-direction: column; gap: 14px; margin-bottom: 24px; }
         .form-group { display: flex; flex-direction: column; gap: 6px; }
         label { font-weight: 600; font-size: 0.9rem; }
         input, select {
             padding: 10px 12px; border: 1px solid var(--border-color);
             border-radius: 8px; font-size: 1rem; outline: none;
         }
+        .checkbox-group {
+            flex-direction: row; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem;
+        }
+        .checkbox-group input { width: 18px; height: 18px; cursor: pointer; }
+
         button.btn-submit {
             background-color: var(--primary); color: white;
             border: none; padding: 12px; border-radius: 8px;
@@ -117,6 +166,7 @@
             transition: background 0.2s;
         }
         button.btn-submit:hover { background-color: var(--primary-hover); }
+
         .expense-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; max-height: 220px; overflow-y: auto; }
         .expense-item {
             display: flex; justify-content: space-between; align-items: center;
@@ -124,6 +174,10 @@
             border-radius: 8px;
         }
         .expense-amount { font-weight: bold; color: var(--danger); }
+        .tag-fixed {
+            background: #e0e7ff; color: #3730a3; font-size: 0.7rem;
+            padding: 2px 6px; border-radius: 4px; margin-right: 6px; font-weight: bold;
+        }
         .btn-delete { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 1.2rem; }
         .btn-delete:hover { color: var(--danger); }
         .empty-state { text-align: center; color: #94a3b8; padding: 20px; }
@@ -142,11 +196,26 @@
         <div class="slide-container">
             <div id="slide-wrapper" class="slide-content">
                 <div class="summary-card">
-                    <h3 id="summary-title">סה"כ הוצאות לחודש זה</h3>
+                    <h3>סה"כ הוצאות לחודש זה</h3>
                     <div class="amount" id="total-amount">0.00 ₪</div>
+                    
+                    <div class="budget-progress-container">
+                        <div id="progress-bar" class="budget-progress-bar"></div>
+                    </div>
+                    <div class="budget-info">
+                        <span id="budget-status-text">לא הוגדר תקציב</span>
+                        <span id="budget-max-text"></span>
+                    </div>
+                    <button class="btn-budget-edit" onclick="setMonthlyBudget()">הגדר/שנה תקציב חודשי</button>
                 </div>
 
-                <!-- גרף עוגה מסודר -->
+                <!-- כלי חיפוש וייצוא -->
+                <div class="tools-bar">
+                    <input type="text" id="search-input" class="search-input" placeholder="חיפוש לפי הערה או קטגוריה..." oninput="render()">
+                    <button class="btn-export" onclick="exportToExcel()" title="ייצוא לאקסל">ייצוא ל-Excel</button>
+                </div>
+
+                <!-- גרף עוגה -->
                 <div class="chart-container">
                     <h3>התפלגות הוצאות (עוגה)</h3>
                     <div class="canvas-wrapper">
@@ -189,12 +258,17 @@
                 <label for="note">הערה (אופציונלי)</label>
                 <input type="text" id="note" placeholder="למשל: תדלוק פז">
             </div>
+            <div class="form-group checkbox-group">
+                <input type="checkbox" id="is-fixed">
+                <label for="is-fixed" style="cursor: pointer;">זוהי הוצאה קבועה (הוראת קבע חודשית)</label>
+            </div>
             <button type="submit" class="btn-submit">הוסף הוצאה</button>
         </form>
     </div>
 
     <script>
         let expenses = JSON.parse(localStorage.getItem('expenses')) || [];
+        let budgets = JSON.parse(localStorage.getItem('budgets')) || {}; // תקציב לכל חודש מפתח "YYYY-M"
         
         let today = new Date();
         let displayYear = today.getFullYear();
@@ -205,32 +279,14 @@
             "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר"
         ];
 
-        // קטגוריות מעודכנות
         const categories = [
-            "אוכל ומסעדות", 
-            "סופרמרקט וקניות", 
-            "רכב ודלק", 
-            "תחבורה ציבורית", 
-            "חשמל", 
-            "מים", 
-            "ארנונה וועד בית", 
-            "תקשורת (אינטרנט/סלולר)", 
-            "בילויים ופנאי", 
-            "שונות"
+            "אוכל ומסעדות", "סופרמרקט וקניות", "רכב ודלק", "תחבורה ציבורית", 
+            "חשמל", "מים", "ארנונה וועד בית", "תקשורת (אינטרנט/סלולר)", "בילויים ופנאי", "שונות"
         ];
 
-        // התאמת צבעים ייחודיים לכל קטגוריה בגרף
         const categoryColors = [
-            '#2563eb', // אוכל ומסעדות
-            '#3b82f6', // סופרמרקט וקניות
-            '#f59e0b', // רכב ודלק
-            '#fbbf24', // תחבורה ציבורית
-            '#e11d48', // חשמל
-            '#06b6d4', // מים
-            '#8b5cf6', // ארנונה וועד בית
-            '#ec4899', // תקשורת
-            '#10b981', // בילויים ופנאי
-            '#64748b'  // שונות
+            '#2563eb', '#3b82f6', '#f59e0b', '#fbbf24', 
+            '#e11d48', '#06b6d4', '#8b5cf6', '#ec4899', '#10b981', '#64748b'
         ];
 
         let myChart = null;
@@ -239,25 +295,60 @@
         const amountInput = document.getElementById('amount');
         const categorySelect = document.getElementById('category');
         const noteInput = document.getElementById('note');
+        const isFixedInput = document.getElementById('is-fixed');
         const expenseList = document.getElementById('expense-list');
         const totalAmountEl = document.getElementById('total-amount');
         const monthLabel = document.getElementById('current-month-label');
         const slideWrapper = document.getElementById('slide-wrapper');
+        const searchInput = document.getElementById('search-input');
+        const progressBar = document.getElementById('progress-bar');
+        const budgetStatusText = document.getElementById('budget-status-text');
+        const budgetMaxText = document.getElementById('budget-max-text');
+
+        // בדיקה ויצירה אוטומטית של הוצאות קבועות בחודשים חדשים
+        function checkAndGenerateFixedExpenses() {
+            const currentKey = `${displayYear}-${displayMonth}`;
+            const hasGeneratedKey = `generated_${currentKey}`;
+            
+            // אם כבר יצרו לחודש זה, דלג
+            if (localStorage.getItem(hasGeneratedKey)) return;
+
+            // מצא הוצאות קבועות מחודשים קודמים
+            const fixedTemplates = expenses.filter(exp => exp.isFixed);
+            if (fixedTemplates.length === 0) return;
+
+            // בדוק האם כבר קיימות הוצאות לחודש הנוכחי
+            const existingThisMonth = expenses.filter(exp => {
+                const d = new Date(exp.rawDate);
+                return d.getFullYear() === displayYear && d.getMonth() === displayMonth && exp.isFixed;
+            });
+
+            // אם אין עדיין הוצאות קבועות רשומות לחודש זה, צור אותן בהתבסס על התבניות
+            if (existingThisMonth.length === 0) {
+                fixedTemplates.forEach(template => {
+                    const newDate = new Date(displayYear, displayMonth, 1, 10, 0, 0); // תחילת חודש
+                    expenses.push({
+                        amount: template.amount,
+                        category: template.category,
+                        note: template.note ? template.note + ' (קבוע)' : 'הוצאה קבועה',
+                        dateStr: newDate.toLocaleDateString('he-IL') + ' 10:00',
+                        rawDate: newDate.toISOString(),
+                        isFixed: true
+                    });
+                });
+                localStorage.setItem(hasGeneratedKey, 'true');
+                localStorage.setItem('expenses', JSON.stringify(expenses));
+            }
+        }
 
         function initChart(dataValues) {
             const ctx = document.getElementById('budgetChart').getContext('2d');
-            if (myChart) {
-                myChart.destroy();
-            }
+            if (myChart) myChart.destroy();
             myChart = new Chart(ctx, {
                 type: 'pie',
                 data: {
                     labels: categories,
-                    datasets: [{
-                        data: dataValues,
-                        backgroundColor: categoryColors,
-                        borderWidth: 1
-                    }]
+                    datasets: [{ data: dataValues, backgroundColor: categoryColors, borderWidth: 1 }]
                 },
                 options: {
                     responsive: true,
@@ -265,30 +356,17 @@
                     plugins: {
                         datalabels: {
                             color: '#1e293b',
-                            font: {
-                                weight: 'bold',
-                                size: 10
-                            },
-                            anchor: 'end',
-                            align: 'start',
-                            offset: 4,
-                            formatter: (value) => {
-                                return value > 0 ? value.toFixed(0) + ' ₪' : '';
-                            }
+                            font: { weight: 'bold', size: 10 },
+                            anchor: 'end', align: 'start', offset: 4,
+                            formatter: (value) => value > 0 ? value.toFixed(0) + ' ₪' : ''
                         },
                         legend: {
                             position: 'bottom',
-                            labels: {
-                                font: { size: 10, family: 'system-ui' },
-                                boxWidth: 10,
-                                padding: 10
-                            }
+                            labels: { font: { size: 10, family: 'system-ui' }, boxWidth: 10, padding: 10 }
                         },
                         tooltip: {
                             callbacks: {
-                                label: function(context) {
-                                    return ` ${context.label}: ${context.raw.toFixed(2)} ₪`;
-                                }
+                                label: function(context) { return ` ${context.label}: ${context.raw.toFixed(2)} ₪`; }
                             }
                         }
                     }
@@ -299,19 +377,74 @@
 
         function changeMonth(direction) {
             slideWrapper.classList.add('fade-out');
-            
             setTimeout(() => {
                 displayMonth += direction;
-                if (displayMonth > 11) {
-                    displayMonth = 0;
-                    displayYear++;
-                } else if (displayMonth < 0) {
-                    displayMonth = 11;
-                    displayYear--;
-                }
+                if (displayMonth > 11) { displayMonth = 0; displayYear++; }
+                else if (displayMonth < 0) { displayMonth = 11; displayYear--; }
+                
+                checkAndGenerateFixedExpenses();
                 render();
                 slideWrapper.classList.remove('fade-out');
             }, 200);
+        }
+
+        function setMonthlyBudget() {
+            const currentKey = `${displayYear}-${displayMonth}`;
+            const currentVal = budgets[currentKey] || '';
+            const input = prompt(`הכנס תקציב מקסימלי לחודש ${monthNames[displayMonth]} ${displayYear} (ב-₪):`, currentVal);
+            if (input !== null) {
+                const num = parseFloat(input);
+                if (!isNaN(num) && num > 0) {
+                    budgets[currentKey] = num;
+                } else {
+                    delete budgets[currentKey];
+                }
+                localStorage.setItem('budgets', JSON.stringify(budgets));
+                render();
+            }
+        }
+
+        function updateBudgetUI(total) {
+            const currentKey = `${displayYear}-${displayMonth}`;
+            const maxBudget = budgets[currentKey];
+
+            if (!maxBudget) {
+                progressBar.style.width = '0%';
+                budgetStatusText.textContent = 'לא הוגדר תקציב לחודש זה';
+                budgetMaxText.textContent = '';
+                return;
+            }
+
+            const percentage = Math.min((total / maxBudget) * 100, 100);
+            progressBar.style.width = percentage + '%';
+            budgetMaxText.textContent = `יעד: ${maxBudget.toFixed(2)} ₪`;
+
+            if (total > maxBudget) {
+                progressBar.style.backgroundColor = 'var(--danger)';
+                budgetStatusText.textContent = `⚠️ חריגה מהתקציב ב- ${(total - maxBudget).toFixed(2)} ₪!`;
+                budgetStatusText.style.color = 'var(--danger)';
+            } else if (percentage > 85) {
+                progressBar.style.backgroundColor = 'var(--warning)';
+                budgetStatusText.textContent = `⚠️ מתקרב לתקציב (נותרו ${(maxBudget - total).toFixed(2)} ₪)`;
+                budgetStatusText.style.color = 'var(--warning)';
+            } else {
+                progressBar.style.backgroundColor = 'var(--success)';
+                budgetStatusText.textContent = `✅ בשליטה (נותרו ${(maxBudget - total).toFixed(2)} ₪)`;
+                budgetStatusText.style.color = 'var(--success)';
+            }
+        }
+
+        function exportToExcel() {
+            let csv = '\uFEFFסכום,קטגוריה,הערה,תאריך,קבוע\n';
+            expenses.forEach(exp => {
+                csv += `"${exp.amount}","${exp.category}","${exp.note || ''}","${exp.dateStr}","${exp.isFixed ? 'כן' : 'לא'}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `הוצאות_תקציב_${displayYear}_${displayMonth + 1}.csv`;
+            a.click();
         }
 
         function saveAndRender() {
@@ -321,10 +454,17 @@
 
         function render() {
             monthLabel.textContent = `${monthNames[displayMonth]} ${displayYear}`;
+            const searchTerm = searchInput.value.trim().toLowerCase();
             
             const filteredExpenses = expenses.filter(exp => {
                 const expDate = new Date(exp.rawDate);
-                return expDate.getFullYear() === displayYear && expDate.getMonth() === displayMonth;
+                const isCorrectMonth = expDate.getFullYear() === displayYear && expDate.getMonth() === displayMonth;
+                if (!isCorrectMonth) return false;
+
+                if (!searchTerm) return true;
+                const matchCategory = exp.category.toLowerCase().includes(searchTerm);
+                const matchNote = exp.note && exp.note.toLowerCase().includes(searchTerm);
+                return matchCategory || matchNote;
             });
 
             expenseList.innerHTML = '';
@@ -332,19 +472,24 @@
             let catTotals = {};
             categories.forEach(cat => catTotals[cat] = 0);
 
-            filteredExpenses.forEach(exp => {
-                total += parseFloat(exp.amount);
-                if (catTotals[exp.category] !== undefined) {
-                    catTotals[exp.category] += parseFloat(exp.amount);
+            // חישוב סך הכל חודשי (ללא קשר לחיפוש הנוכחי בטבלה)
+            expenses.forEach(exp => {
+                const expDate = new Date(exp.rawDate);
+                if (expDate.getFullYear() === displayYear && expDate.getMonth() === displayMonth) {
+                    total += parseFloat(exp.amount);
+                    if (catTotals[exp.category] !== undefined) {
+                        catTotals[exp.category] += parseFloat(exp.amount);
+                    }
                 }
             });
 
             const chartDataValues = categories.map(cat => catTotals[cat]);
             initChart(chartDataValues);
+            updateBudgetUI(total);
+            totalAmountEl.textContent = total.toFixed(2) + ' ₪';
 
             if (filteredExpenses.length === 0) {
-                expenseList.innerHTML = '<li class="empty-state">אין הוצאות רשומות לחודש זה.</li>';
-                totalAmountEl.textContent = '0.00 ₪';
+                expenseList.innerHTML = '<li class="empty-state">אין הוצאות רשומות תואמות לחודש זה.</li>';
                 return;
             }
 
@@ -354,6 +499,7 @@
                 li.className = 'expense-item';
                 li.innerHTML = `
                     <div>
+                        ${exp.isFixed ? '<span class="tag-fixed">קבוע</span>' : ''}
                         <strong>${exp.category}</strong><br>
                         <small style="color: #64748b;">${exp.dateStr} ${exp.note ? '• ' + exp.note : ''}</small>
                     </div>
@@ -364,8 +510,6 @@
                 `;
                 expenseList.appendChild(li);
             });
-
-            totalAmountEl.textContent = total.toFixed(2) + ' ₪';
         }
 
         form.addEventListener('submit', function(e) {
@@ -373,24 +517,27 @@
             const amount = parseFloat(amountInput.value);
             const category = categorySelect.value;
             const note = noteInput.value.trim();
+            const isFixed = isFixedInput.checked;
             if (!amount || !category) return;
 
             const now = new Date();
-            const dateStr = now.toLocaleDateString('he-IL') + ' ' + now.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+            // אם מוסיפים לחודש שמוצג כרגע במסך ולא לחודש הנוכחי ממש:
+            const targetDate = new Date(displayYear, displayMonth, now.getDate(), now.getHours(), now.getMinutes());
+
+            const dateStr = targetDate.toLocaleDateString('he-IL') + ' ' + targetDate.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
 
             expenses.push({
                 amount,
                 category,
                 note,
                 dateStr,
-                rawDate: now.toISOString()
+                rawDate: targetDate.toISOString(),
+                isFixed
             });
-
-            displayYear = now.getFullYear();
-            displayMonth = now.getMonth();
 
             saveAndRender();
             form.reset();
+            isFixedInput.checked = false;
         });
 
         window.deleteExpense = function(index) {
@@ -398,6 +545,8 @@
             saveAndRender();
         };
 
+        // הרצה ראשונית
+        checkAndGenerateFixedExpenses();
         render();
     </script>
 </body>
